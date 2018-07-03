@@ -45,11 +45,45 @@ export default class RecordCollection {
 
   insert(ids, index) {
     Array.isArray(ids) || (ids = [ids])
+    const currentIds = this.ids.slice()
+
+    // Remove duplicate ids from the collection before insertion.
+    if (currentIds.length) {
+      ids.forEach((id, i) => {
+        const idx = currentIds.indexOf(id)
+
+        if (idx > -1) {
+          currentIds.splice(idx, 1)
+
+          if (idx < index) {
+            index--
+          }
+        }
+      })
+    }
 
     if (index == null) {
-      return this.set(this.ids.concat(ids))
+      return this.set(currentIds.concat(ids))
     } else {
-      return this.set(this.ids.slice().splice(index, 0, ...ids))
+      currentIds.splice(index, 0, ...ids)
+      return this.set(currentIds)
+    }
+  }
+
+  insertUnique(ids, index) {
+    Array.isArray(ids) || (ids = [ids])
+    const currentIds = this.ids.slice()
+
+    // Omit ids that already exist in the collection.
+    if (currentIds.length) {
+      ids = ids.filter(id => currentIds.indexOf(id) === -1)
+    }
+
+    if (index == null) {
+      return this.set(currentIds.concat(ids))
+    } else {
+      currentIds.splice(index, 0, ...ids)
+      return this.set(currentIds)
     }
   }
 
