@@ -8,12 +8,14 @@ export default class SelectorFactory {
     this._relatedTableNamesCache = {}
   }
 
-  record(tableName) {
+  record(tableNames) {
+    tableNames = this._resolveTableNames(tableNames)
+
     return createSelector(
-      this.createTablesSelector(tableName),
+      this._createTablesSelector(tableNames),
       (state, id) => id,
       (tables, id) => {
-        const table = this.db.selectTables(tables)[tableName]
+        const table = this.db.selectTables(tables)[tableNames[0]]
         if (table.exists(id)) {
           return table.get(id)
         }
@@ -21,12 +23,14 @@ export default class SelectorFactory {
     )
   }
 
-  collection(tableName, defaultKey = DEFAULT_COLLECTION_KEY) {
+  collection(tableNames, defaultKey = DEFAULT_COLLECTION_KEY) {
+    tableNames = this._resolveTableNames(tableNames)
+
     return createSelector(
-      this.createTablesSelector(tableName),
+      this._createTablesSelector(tableNames),
       (state, key = defaultKey) => key,
       (tables, key) => {
-        const table = this.db.selectTables(tables)[tableName]
+        const table = this.db.selectTables(tables)[tableNames[0]]
         const collection = table.collection(key)
 
         if (collection.exists()) {
@@ -38,11 +42,29 @@ export default class SelectorFactory {
     )
   }
 
-  createTablesSelector(tableNames) {
-    if (!Array.isArray(tableNames)) {
-      tableNames = [tableNames].concat(this._getRelatedTableNames(tableNames))
-    }
+  collectionValue(tableName, defaultKey = DEFAULT_COLLECTION_KEY) {
+    return createSelector(
+      this._createTablesSelector([tableName]),
+      (state, key = defaultKey) => key,
+      (tables, key) => {
+        const table = this.db.selectTables(tables)[tableName]
+        const collection = table.collection(key)
 
+        if (collection.exists()) {
+          return collection.value()
+        }
+      }
+    )
+  }
+
+  _resolveTableNames(tableNames) {
+    if (Array.isArray(tableNames)) {
+      return tableNames
+    }
+    return [tableNames].concat(this._getRelatedTableNames(tableNames))
+  }
+
+  _createTablesSelector(tableNames) {
     return createStructuredSelector(
       tableNames.reduce((acc, name) => {
         acc[name] = state => state[this.stateKey][name]

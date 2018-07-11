@@ -25,6 +25,10 @@ export default class RecordCollection {
     return this.ids.map(id => factory.newRecordModel(id, this.table))
   }
 
+  value() {
+    return this.ids.map(id => this.table.getValue(id))
+  }
+
   map(callback) {
     return this.all().map(callback)
   }
@@ -35,12 +39,18 @@ export default class RecordCollection {
 
   set(ids, meta) {
     const props = { ids }
-    props.meta = arguments.length > 1 ? meta : this.meta
+    if (arguments.length > 1) {
+      props.meta = meta
+    }
     return this._setProps(props)
   }
 
   setMeta(meta) {
     return this._setProps({ meta })
+  }
+
+  updateMeta(meta) {
+    return this.setMeta({ ...this.meta, ...meta })
   }
 
   insert(ids, index) {
@@ -102,7 +112,7 @@ export default class RecordCollection {
   }
 
   clear() {
-    return this.set([], undefined)
+    return this.set([], {})
   }
 
   delete() {
@@ -130,7 +140,10 @@ export default class RecordCollection {
       ...state,
       collections: {
         ...collections,
-        [this.key]: props
+        [this.key]: {
+          ...collections[this.key],
+          ...props 
+        }
       }
     }
 

@@ -3,6 +3,10 @@ import { DEFAULT_COLLECTION_KEY } from './constants'
 import RecordCollection from './RecordCollection'
 
 export default class TableModel extends DefaultTableModel {
+  getRecordCollectionClass() {
+    return RecordCollection
+  }
+
   ingest(data) {
     const isArray = Array.isArray(data)
     isArray || (data = [data])
@@ -11,13 +15,78 @@ export default class TableModel extends DefaultTableModel {
     return isArray ? ids : ids[0]
   }
 
-  getRecordCollectionClass() {
-    return RecordCollection
-  }
-
   collection(key = DEFAULT_COLLECTION_KEY) {
     const RecordCollection = this.getRecordCollectionClass()
     return new RecordCollection(this, key)
+  }
+
+  purgeUnreferencedRecords(exceptIds = []) {
+    const { tables } = this.session
+    const { ids, byId, indexes, collections = {} } = this.state
+    
+    const nextById = exceptIds.reduce((acc, id) => {
+      if (byId[id]) acc[id] = byId[id]
+      return acc
+    }, {})
+
+    Object.keys(collections).forEach(key => {
+      const { ids = [] } = collections[key]
+      ids.forEach(id => {
+        nextById[id] = byId[id]
+      })
+    })
+
+    this.schema.relations.forEach(f => {
+      const idx = tables[f.table.name].state.indexes[f.propName]
+
+      if (idx) {
+        Object.keys(idx.values).forEach(id => {
+          nextById[id] = byId[id]
+        })
+      }
+    })
+
+    const nextIds = ids.reduce((acc, id) => {
+      if (nextById[id]) {
+        acc.push(id)
+      }
+      return acc
+    }, [])
+
+    // Exit if no records were dereferenced.
+    if (ids.length === nextIds.length) return
+
+    // Clean indexes.
+    const nextIndexes = Object.keys(indexes).reduce((acc, key) => {
+      const idx = indexes[key]
+
+      const values = Object.keys(idx.values).reduce((acc, id) => {
+        let value = idx.values[id]
+        const i = value.indexOf(id)
+
+        if (i === -1) {
+          acc[id] = value
+        } else if (value.length > 1) {
+          value = value.slice()
+          value.splice(i, 1)
+          acc[id] = value
+        }
+
+        return acc
+      })
+
+      acc[key] = { ...idx, values }
+      return acc
+    }, {})
+
+    this.state = {
+      ...this.state,
+      ids: nextIds,
+      byId: nextById,
+      indexes: nextIndexes
+    }
+
+    this.dirty = true
   }
 
   _cleanIndexes(id, record, indexes) {
@@ -29,7 +98,7 @@ export default class TableModel extends DefaultTableModel {
     let updatedCollections
 
     Object.keys(collections).forEach(key => {
-      let { ids } = collections[key]
+      let { ids = [] } = collections[key]
       const index = ids.indexOf(id)
 
       if (index > -1) {
