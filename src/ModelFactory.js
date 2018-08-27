@@ -2,13 +2,18 @@ import { DefaultModelFactory } from 'redux-db'
 import TableModel from './TableModel'
 import RecordModel from './RecordModel'
 
-export default class ModelFactory extends DefaultModelFactory {
+export default class ModelFactory extends DefaultModelFactory {  
+  getRecordBaseClass(schema) {
+    return RecordModel
+  }
+
   newTableModel(session, state, schema) {
     return new TableModel(session, state, schema)
   }
 
-  getRecordBaseClass(schema) {
-    return RecordModel
+  newRecordValueField(schema, record) {
+    const field = super.newRecordField(schema, record)
+    return field && field.value
   }
 
   _createRecordModel(schema) {
@@ -22,8 +27,7 @@ export default class ModelFactory extends DefaultModelFactory {
 
         Object.defineProperty(ExtendedRecordModel.prototype, name, {
           get() {
-            const f = factory(field, this)
-            return f && f.value
+            return factory(field, this)
           }
         })
       }
@@ -39,7 +43,7 @@ export default class ModelFactory extends DefaultModelFactory {
         })
       }
 
-      schema.fields.forEach(f => (f.isForeignKey || !f.isPrimaryKey) && defineAttributeProperty(f.propName, f, this.newRecordField.bind(this)))
+      schema.fields.forEach(f => (f.isForeignKey || !f.isPrimaryKey) && defineAttributeProperty(f.propName, f, f.references ? this.newRecordField : this.newRecordValueField.bind(this)))
       schema.relations.forEach(f => f.relationName && defineRelationProperty(f.relationName, f, f.unique ? this.newRecordRelation.bind(this) : this.newRecordSet.bind(this), !f.unique))
 
       return this._recordClass[schema.name] = ExtendedRecordModel
