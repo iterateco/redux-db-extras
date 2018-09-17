@@ -1,6 +1,6 @@
 {
   "name": "redux-db-extras",
-  "version": "1.0.3",
+  "version": "1.0.31",
   "description": "Collections, selectors, and top-level record fields for redux-db",
   "main": "src/index.js",
   "scripts": {

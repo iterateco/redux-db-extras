@@ -8,12 +8,12 @@ export default class SelectorFactory {
     this._relatedTableNamesCache = {}
   }
 
-  record(tableNames) {
+  record(tableNames, defaultId) {
     tableNames = this._resolveTableNames(tableNames)
 
     return createSelector(
       this._createTablesSelector(tableNames),
-      (state, id) => id,
+      (state, id = defaultId) => id,
       (tables, id) => {
         const table = this.db.selectTables(tables)[tableNames[0]]
         if (table.exists(id)) {
