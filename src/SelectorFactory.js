@@ -8,17 +8,46 @@ export default class SelectorFactory {
     this._relatedTableNamesCache = {}
   }
 
-  record(tableNames, defaultId) {
-    tableNames = this._resolveTableNames(tableNames)
+  create(tableNames, ...selectors) {
+    const singleTable = !Array.isArray(tableNames)
+    const resultSelector = selectors.pop()
 
     return createSelector(
-      this._createTablesSelector(tableNames),
-      (state, id = defaultId) => id,
-      (tables, id) => {
-        const table = this.db.selectTables(tables)[tableNames[0]]
-        if (table.exists(id)) {
-          return table.get(id)
-        }
+      this._createTablesSelector(this._resolveTableNames(tableNames)),
+      ...selectors,
+      (state, ...args) => {
+        const tables = this.db.selectTables(state)
+        return resultSelector(singleTable ? tables[tableNames] : tables, ...args)
+      }
+    )
+  }
+
+  record(tableNames, defaultIdOrPredicate) {
+    tableNames = this._resolveTableNames(tableNames)
+
+    return this.create(
+      this._resolveTableNames(tableNames),
+      (state, idOrPredicate = defaultIdOrPredicate) => idOrPredicate,
+      (tables, idOrPredicate) => {
+        const table = tables[tableNames[0]]
+        return typeof idOrPredicate === 'function'
+          ? table.find(idOrPredicate)
+          : table.getOrDefault(idOrPredicate) || undefined
+      }
+    )
+  }
+
+  recordArray(tableNames, defaultPredicate) {
+    tableNames = this._resolveTableNames(tableNames)
+
+    return this.create(
+      tableNames,
+      (state, predicate = defaultPredicate) => predicate,
+      (tables, predicate) => {
+        const table = tables[tableNames[0]]
+        return predicate
+          ? table.filter(predicate)
+          : table.all()
       }
     )
   }
@@ -26,12 +55,11 @@ export default class SelectorFactory {
   collection(tableNames, defaultKey = DEFAULT_COLLECTION_KEY) {
     tableNames = this._resolveTableNames(tableNames)
 
-    return createSelector(
-      this._createTablesSelector(tableNames),
+    return this.create(
+      tableNames,
       (state, key = defaultKey) => key,
       (tables, key) => {
-        const table = this.db.selectTables(tables)[tableNames[0]]
-        const collection = table.collection(key)
+        const collection = tables[tableNames[0]].collection(key)
 
         if (collection.exists()) {
           const recordArray = collection.all()
@@ -43,11 +71,10 @@ export default class SelectorFactory {
   }
 
   collectionValue(tableName, defaultKey = DEFAULT_COLLECTION_KEY) {
-    return createSelector(
-      this._createTablesSelector([tableName]),
+    return this.create(
+      tableName,
       (state, key = defaultKey) => key,
-      (tables, key) => {
-        const table = this.db.selectTables(tables)[tableName]
+      (table, key) => {
         const collection = table.collection(key)
 
         if (collection.exists()) {
