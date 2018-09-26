@@ -46,7 +46,7 @@ export default class TableModel extends DefaultTableModel {
   purgeUnreferencedRecords(exceptIds = []) {
     const { tables } = this.session
     const { ids, byId, indexes, collections = {} } = this.state
-    
+
     const nextById = exceptIds.reduce((acc, id) => {
       if (byId[id]) acc[id] = byId[id]
       return acc
@@ -81,24 +81,16 @@ export default class TableModel extends DefaultTableModel {
 
     // Clean indexes.
     const nextIndexes = Object.keys(indexes).reduce((acc, key) => {
-      const idx = indexes[key]
-
-      const values = Object.keys(idx.values).reduce((acc, id) => {
-        let value = idx.values[id]
-        const i = value.indexOf(id)
-
-        if (i === -1) {
-          acc[id] = value
-        } else if (value.length > 1) {
-          value = value.slice()
-          value.splice(i, 1)
-          acc[id] = value
+      const index = indexes[key]
+      const values = Object.keys(index.values).reduce((acc, foreignId) => {
+        const value = index.values[foreignId].filter(id => nextById[id])
+        if (value.length) {
+          acc[foreignId] = value
         }
-
         return acc
-      })
+      }, {})
 
-      acc[key] = { ...idx, values }
+      acc[key] = { ...index, values }
       return acc
     }, {})
 
