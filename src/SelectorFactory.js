@@ -84,6 +84,14 @@ export default class SelectorFactory {
     )
   }
 
+  collectionIds(tableName, defaultKey = DEFAULT_COLLECTION_KEY) {
+    return this.create(
+      tableName,
+      (state, key = defaultKey) => key,
+      (table, key) => table.collection(key).ids
+    )
+  }
+
   _resolveTableNames(tableNames) {
     if (Array.isArray(tableNames)) {
       return tableNames

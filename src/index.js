@@ -10,13 +10,13 @@ export { default as RecordCollection } from './RecordCollection'
 export function createDatabase(schema, options = {}) {
   const {
     factory = new ModelFactory(),
-    onMissingPk = createPkGenerator(),
+    onGeneratePK = createPkGenerator(),
     ...rest
   } = options
 
   return defaultCreateDatabase(schema, {
     factory,
-    onMissingPk,
+    onGeneratePK,
     ...rest
   })
 }
