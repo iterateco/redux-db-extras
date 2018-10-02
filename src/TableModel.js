@@ -106,6 +106,43 @@ export default class TableModel extends DefaultTableModel {
     this.dirty = true
   }
 
+  /**
+   * Fix state mutation bug 
+   */
+  updateNormalized(table) {
+    let dirty
+    let { state } = this
+
+    const records = Object.keys(table.byId).map(id => {
+      if (!state.byId[id])
+        throw new Error("Failed to apply update. No \"" + this.schema.name + "\" record with id: " + id + " exists.")
+
+      const oldRecord = state.byId[id]
+      const newRecord = { ...oldRecord, ...table.byId[id] }
+
+      const isModified = this.schema.isModified(oldRecord, newRecord)
+
+      if (isModified) {
+        if (!this.dirty) {
+          state = { ...state, byId: { ...state.byId } }
+          this.dirty = true
+        }
+
+        dirty = true
+        state.byId[id] = newRecord
+      }
+
+      return this.schema.db.factory.newRecordModel(id, this)
+    })
+
+    if (dirty) {
+      this.state = state
+      this._updateIndexes(table)
+    }
+
+    return records
+  }
+
   _cleanIndexes(id, record, indexes) {
     super._cleanIndexes(id, record, indexes)
 

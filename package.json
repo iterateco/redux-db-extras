@@ -1,6 +1,6 @@
 {
   "name": "redux-db-extras",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "description": "Collections, selectors, and top-level record fields for redux-db",
   "main": "src/index.js",
   "scripts": {
@@ -13,6 +13,7 @@
     "reselect": "^3.0.1"
   },
   "peerDependencies": {
+    "lodash": "^4.17.4",
     "redux-db": "^0.9.11"
   },
   "repository": {
