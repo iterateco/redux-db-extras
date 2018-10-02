@@ -3,6 +3,7 @@ export default {
     const record = this.schema.db.factory.newRecordModel("*", this)
     const result = this.state.ids.find((id, i) => {
       record._id = id
+      record._fields = {}
       return predicate.call(context, record, i)
     })
 
@@ -15,6 +16,7 @@ export default {
 
     return this.state.ids.reduce((acc, id, i) => {
       dummyRecord._id = id
+      dummyRecord._fields = {}
       if (predicate.call(context, dummyRecord, i)) {
         acc.push(factory.newRecordModel(id, this))
       }
