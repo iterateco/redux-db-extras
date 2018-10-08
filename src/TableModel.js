@@ -16,6 +16,18 @@ export default class TableModel extends DefaultTableModel {
     return isArray ? ids : ids[0]
   }
 
+  insert(data) {
+    const isArray = Array.isArray(data)
+    const models = super.insert.call(this, data)
+    return isArray ? models : models[0]
+  }
+
+  update(data) {
+    const isArray = Array.isArray(data)
+    const models = super.update.call(this, data)
+    return isArray ? models : models[0]
+  }
+
   upsert(data) {
     const isArray = Array.isArray(data)
     const models = super.upsert.call(this, data)
